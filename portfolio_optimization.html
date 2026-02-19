@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Optimal Portfolio Allocation — Pension Fund MVO Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --ink: #0f0f0f;
+    --paper: #f7f4ef;
+    --cream: #ede9e0;
+    --rule: #d4cfc4;
+    --accent: #c84b2f;
+    --accent2: #2d5fa6;
+    --gold: #b8962e;
+    --green: #2a7a4b;
+    --muted: #7a7167;
+    --serif: 'DM Serif Display', Georgia, serif;
+    --sans: 'DM Sans', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-weight: 300;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── MASTHEAD ── */
+  .masthead {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 3.5rem 4rem 2.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .masthead::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent, transparent 40px,
+      rgba(255,255,255,0.015) 40px, rgba(255,255,255,0.015) 41px
+    );
+    pointer-events: none;
+  }
+  .masthead-eyebrow {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--rule);
+    margin-bottom: 1rem;
+  }
+  .masthead h1 {
+    font-family: var(--serif);
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    font-weight: 400;
+    line-height: 1.15;
+    margin-bottom: 0.75rem;
+  }
+  .masthead h1 em { font-style: italic; color: var(--gold); }
+  .masthead-sub {
+    font-size: 0.9rem;
+    color: rgba(247,244,239,0.6);
+    max-width: 600px;
+  }
+  .masthead-meta {
+    display: flex; gap: 2.5rem; margin-top: 2rem;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    padding-top: 1.25rem;
+  }
+  .meta-item { font-family: var(--mono); font-size: 0.72rem; }
+  .meta-label { color: rgba(247,244,239,0.4); display: block; margin-bottom: 0.2rem; }
+  .meta-value { color: var(--paper); font-size: 0.82rem; }
+
+  /* ── LAYOUT ── */
+  .container { max-width: 1300px; margin: 0 auto; padding: 0 2rem; }
+  .section { padding: 3rem 0 2rem; }
+  .section + .section { border-top: 1px solid var(--rule); }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+  .section-title {
+    font-family: var(--serif);
+    font-size: 1.9rem;
+    font-weight: 400;
+    margin-bottom: 0.4rem;
+    line-height: 1.2;
+  }
+  .section-lead {
+    font-size: 0.88rem;
+    color: var(--muted);
+    max-width: 700px;
+    margin-bottom: 2rem;
+    line-height: 1.7;
+  }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex; gap: 0; margin-bottom: 2rem;
+    border-bottom: 2px solid var(--rule);
+  }
+  .tab-btn {
+    padding: 0.7rem 1.5rem;
+    font-family: var(--sans); font-size: 0.85rem; font-weight: 500;
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); border-bottom: 2px solid transparent;
+    margin-bottom: -2px; transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .tab-btn:hover { color: var(--ink); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── STAT CARDS ── */
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 1px;
+           background: var(--rule); border: 1px solid var(--rule); margin-bottom: 2rem; }
+  .card {
+    background: var(--paper); padding: 1.2rem 1.4rem;
+    position: relative;
+  }
+  .card.highlight { background: var(--ink); color: var(--paper); }
+  .card-label { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.15em;
+                text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
+  .card.highlight .card-label { color: rgba(247,244,239,0.5); }
+  .card-value { font-family: var(--serif); font-size: 1.7rem; font-weight: 400; line-height: 1; }
+  .card-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.3rem; }
+  .card.highlight .card-sub { color: rgba(247,244,239,0.5); }
+  .badge {
+    display: inline-block; font-family: var(--mono); font-size: 0.65rem;
+    padding: 0.15rem 0.5rem; border-radius: 2px; margin-top: 0.35rem;
+    font-weight: 500;
+  }
+  .badge.up { background: rgba(42,122,75,0.15); color: var(--green); }
+  .badge.down { background: rgba(200,75,47,0.12); color: var(--accent); }
+  .badge.neutral { background: rgba(45,95,166,0.12); color: var(--accent2); }
+
+  /* ── CHARTS ── */
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 2rem 0; }
+  .chart-wrap {
+    background: white;
+    border: 1px solid var(--rule);
+    padding: 1.5rem;
+    position: relative;
+  }
+  .chart-wrap.full { grid-column: 1 / -1; }
+  .chart-title {
+    font-family: var(--serif); font-size: 1rem; font-weight: 400;
+    margin-bottom: 0.2rem;
+  }
+  .chart-caption { font-size: 0.72rem; color: var(--muted); margin-bottom: 1rem; }
+  canvas { max-height: 340px; }
+
+  /* ── TABLE ── */
+  .data-table-wrap { overflow-x: auto; margin: 1.5rem 0; }
+  .data-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 0.82rem; font-family: var(--mono);
+  }
+  .data-table thead tr { border-bottom: 2px solid var(--ink); }
+  .data-table th {
+    text-align: left; padding: 0.6rem 0.9rem;
+    font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase;
+    font-weight: 500; color: var(--muted);
+  }
+  .data-table td { padding: 0.55rem 0.9rem; border-bottom: 1px solid var(--cream); }
+  .data-table tr.highlight-row { background: rgba(184,150,46,0.08); font-weight: 500; }
+  .data-table tr.baseline-row { background: rgba(122,113,103,0.05); }
+  .data-table tr:hover { background: var(--cream); }
+  .data-table .w-tag {
+    display: inline-block; width: 42px; height: 8px; border-radius: 1px;
+    vertical-align: middle; margin-right: 4px;
+  }
+
+  /* ── WEIGHT BAR ── */
+  .weight-bar { display: flex; height: 28px; border-radius: 2px; overflow: hidden; gap: 1px; }
+  .weight-seg {
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 0.62rem; color: white;
+    transition: all 0.3s; min-width: 0; overflow: hidden;
+  }
+  .seg-eq  { background: #2d5fa6; }
+  .seg-bd  { background: #7a7167; }
+  .seg-alt { background: #c84b2f; }
+
+  /* ── INSIGHT BOX ── */
+  .insight {
+    border-left: 3px solid var(--gold);
+    background: rgba(184,150,46,0.06);
+    padding: 1rem 1.25rem;
+    margin: 1.5rem 0;
+    font-size: 0.85rem;
+    line-height: 1.7;
+  }
+  .insight strong { font-weight: 600; }
+  .insight.caution { border-left-color: var(--accent); background: rgba(200,75,47,0.05); }
+
+  /* ── FRONTIER TOOLTIP ── */
+  #frontier-tooltip {
+    position: fixed; background: var(--ink); color: var(--paper);
+    padding: 0.7rem 1rem; border-radius: 2px; font-size: 0.75rem;
+    font-family: var(--mono); pointer-events: none; z-index: 100;
+    opacity: 0; transition: opacity 0.15s; white-space: nowrap;
+    line-height: 1.8;
+  }
+
+  /* ── SLIDER ── */
+  .slider-row { display: flex; align-items: center; gap: 1rem; margin: 0.5rem 0; }
+  .slider-label { font-family: var(--mono); font-size: 0.72rem; width: 120px; color: var(--muted); }
+  input[type=range] { flex: 1; accent-color: var(--accent); }
+  .slider-val { font-family: var(--mono); font-size: 0.8rem; width: 45px; text-align: right; }
+  .live-result {
+    background: var(--ink); color: var(--paper);
+    padding: 1.25rem 1.5rem; margin-top: 1rem; display: flex; gap: 3rem; flex-wrap: wrap;
+  }
+  .live-item { }
+  .live-lbl { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.15em;
+              text-transform: uppercase; color: rgba(247,244,239,0.45); }
+  .live-val { font-family: var(--serif); font-size: 1.4rem; }
+
+  @media (max-width: 768px) {
+    .chart-grid { grid-template-columns: 1fr; }
+    .masthead { padding: 2rem 1.5rem; }
+    .container { padding: 0 1rem; }
+    .masthead-meta { flex-wrap: wrap; gap: 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<div id="frontier-tooltip"></div>
+
+<div class="masthead">
+  <div class="container">
+    <p class="masthead-eyebrow">Pension Fund Strategy &nbsp;·&nbsp; February 2026 &nbsp;·&nbsp; Quantitative Research</p>
+    <h1>Optimal Portfolio Allocation<br><em>Beyond the Fixed 60/40</em></h1>
+    <p class="masthead-sub">Mean-variance optimization across three-asset universes. Identifying the Sharpe-optimal allocation given Infrastructure or Private Credit as the chosen alternative.</p>
+    <div class="masthead-meta">
+      <div class="meta-item"><span class="meta-label">Method</span><span class="meta-value">Mean-Variance Optimization (Markowitz)</span></div>
+      <div class="meta-item"><span class="meta-label">Data period</span><span class="meta-value">Mar 2011 – Feb 2026 (14.9 yrs)</span></div>
+      <div class="meta-item"><span class="meta-label">Risk-free rate</span><span class="meta-value">1.36% (T-Bill proxy)</span></div>
+      <div class="meta-item"><span class="meta-label">Smoothing</span><span class="meta-value">Geltner appraisal-adjusted returns</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ── SECTION 1: INPUT PARAMETERS ── -->
+  <div class="section">
+    <p class="section-label">01 &nbsp;— &nbsp;Model Inputs</p>
+    <h2 class="section-title">Asset-Level Parameters</h2>
+    <p class="section-lead">Returns and smoothed volatilities derived from public ETF proxies. Correlations back-calculated from observed portfolio-level volatilities in the prior analysis and calibrated against institutional literature.</p>
+
+    <div class="tabs" id="input-tabs">
+      <button class="tab-btn active" onclick="switchTab('input-tabs','input-infra',this)">Infrastructure Universe</button>
+      <button class="tab-btn" onclick="switchTab('input-tabs','input-pc',this)">Private Credit Universe</button>
+    </div>
+
+    <div id="input-infra" class="tab-panel active">
+      <div class="cards">
+        <div class="card"><div class="card-label">Equity (SPY)</div><div class="card-value">14.31%</div><div class="card-sub">Ann. return · 17.2% vol</div></div>
+        <div class="card"><div class="card-label">Bonds (AGG)</div><div class="card-value">2.53%</div><div class="card-sub">Ann. return · 4.8% vol</div></div>
+        <div class="card"><div class="card-label">Infrastructure (IGF)</div><div class="card-value">8.58%</div><div class="card-sub">Ann. return · 7.5% vol (smoothed)</div></div>
+        <div class="card"><div class="card-label">Eq–Bond correlation</div><div class="card-value">−0.050</div><div class="card-sub">Mild negative (mixed regime)</div></div>
+        <div class="card"><div class="card-label">Eq–Infra correlation</div><div class="card-value">0.700</div><div class="card-sub">Back-calculated from portfolio vol</div></div>
+        <div class="card"><div class="card-label">Bd–Infra correlation</div><div class="card-value">0.300</div><div class="card-sub">Long-duration real assets</div></div>
+      </div>
+    </div>
+
+    <div id="input-pc" class="tab-panel">
+      <div class="cards">
+        <div class="card"><div class="card-label">Equity (SPY)</div><div class="card-value">14.31%</div><div class="card-sub">Ann. return · 17.2% vol</div></div>
+        <div class="card"><div class="card-label">Bonds (AGG)</div><div class="card-value">2.53%</div><div class="card-sub">Ann. return · 4.8% vol</div></div>
+        <div class="card"><div class="card-label">Private Credit (BKLN)</div><div class="card-value">3.83%</div><div class="card-sub">Ann. return · 3.6% vol (smoothed)</div></div>
+        <div class="card"><div class="card-label">Eq–Bond correlation</div><div class="card-value">−0.050</div><div class="card-sub">Mild negative (mixed regime)</div></div>
+        <div class="card"><div class="card-label">Eq–PC correlation</div><div class="card-value">0.720</div><div class="card-sub">BKLN: PE-backed senior loans</div></div>
+        <div class="card"><div class="card-label">Bd–PC correlation</div><div class="card-value">0.100</div><div class="card-sub">Floating rate decouples from duration</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SECTION 2: EFFICIENT FRONTIER ── -->
+  <div class="section">
+    <p class="section-label">02 &nbsp;— &nbsp;Efficient Frontier</p>
+    <h2 class="section-title">Optimal Risk–Return Trade-off</h2>
+    <p class="section-lead">The efficient frontier traces the minimum-variance portfolio for every achievable return. Portfolios below the frontier are sub-optimal. The max-Sharpe tangency portfolio maximises return per unit of risk.</p>
+
+    <div class="tabs" id="ef-tabs">
+      <button class="tab-btn active" onclick="switchTab('ef-tabs','ef-infra',this)">Infrastructure</button>
+      <button class="tab-btn" onclick="switchTab('ef-tabs','ef-pc',this)">Private Credit</button>
+    </div>
+
+    <div id="ef-infra" class="tab-panel active">
+      <div class="chart-grid">
+        <div class="chart-wrap full">
+          <div class="chart-title">Efficient Frontier — Equity + Bonds + Infrastructure</div>
+          <div class="chart-caption">Pension-constrained (solid) vs. unconstrained long-only (dashed). Hover for portfolio weights.</div>
+          <canvas id="ef-chart-infra" style="max-height:420px;"></canvas>
+        </div>
+      </div>
+      <div class="insight">
+        <strong>Unconstrained max-Sharpe (Infra):</strong> 7.3% Equity / 0% Bonds / 92.7% Infrastructure — Sharpe 0.969. Academically optimal but operationally impossible for a pension fund. Infrastructure's superior risk-adjusted return vs equity means MVO loads heavily into it.<br><br>
+        <strong>Pension-constrained max-Sharpe:</strong> 30% Equity / 40% Bonds / 30% Infrastructure — Sharpe 0.894. This is the best achievable within institutional bounds. It still represents a significant shift from the 60/40 norm.
+      </div>
+    </div>
+
+    <div id="ef-pc" class="tab-panel">
+      <div class="chart-grid">
+        <div class="chart-wrap full">
+          <div class="chart-title">Efficient Frontier — Equity + Bonds + Private Credit</div>
+          <div class="chart-caption">Pension-constrained (solid) vs. unconstrained long-only (dashed). Hover for portfolio weights.</div>
+          <canvas id="ef-chart-pc" style="max-height:420px;"></canvas>
+        </div>
+      </div>
+      <div class="insight">
+        <strong>Unconstrained max-Sharpe (PC):</strong> 23.2% Equity / 34.7% Bonds / 42.1% Private Credit — Sharpe 0.819. Private Credit's very low volatility (3.6%) and low correlation to bonds makes it attractive as a bond substitute in MVO.<br><br>
+        <strong>Pension-constrained max-Sharpe:</strong> 30.6% Equity / 44.4% Bonds / 25% Private Credit — Sharpe 0.815. Much of the MVO benefit comes from reducing equity exposure rather than from Private Credit's standalone return.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SECTION 3: REFERENCE PORTFOLIO TABLE ── -->
+  <div class="section">
+    <p class="section-label">03 &nbsp;— &nbsp;Portfolio Comparison</p>
+    <h2 class="section-title">Reference Allocation Grid</h2>
+    <p class="section-lead">Practical portfolio allocations that pension committees actually deliberate over. The fixed 60/30/10 from the prior analysis is benchmarked against progressively shifting equity and bond weights.</p>
+
+    <div class="tabs" id="grid-tabs">
+      <button class="tab-btn active" onclick="switchTab('grid-tabs','grid-infra',this)">Infrastructure</button>
+      <button class="tab-btn" onclick="switchTab('grid-tabs','grid-pc',this)">Private Credit</button>
+    </div>
+
+    <div id="grid-infra" class="tab-panel active">
+      <div class="data-table-wrap">
+        <table class="data-table" id="table-infra"></table>
+      </div>
+    </div>
+    <div id="grid-pc" class="tab-panel">
+      <div class="data-table-wrap">
+        <table class="data-table" id="table-pc"></table>
+      </div>
+    </div>
+
+    <div class="insight caution">
+      <strong>Important interpretation:</strong> Higher Sharpe portfolios in this table typically carry lower absolute returns because they reduce equity exposure significantly. A pension fund with specific return targets (e.g. 7–8% to fund liabilities) must balance Sharpe optimality against meeting its actuarial assumed return. The table highlights both dimensions.
+    </div>
+  </div>
+
+  <!-- ── SECTION 4: ALT WEIGHT SWEEP ── -->
+  <div class="section">
+    <p class="section-label">04 &nbsp;— &nbsp;Alternative Weight Sensitivity</p>
+    <h2 class="section-title">Sharpe Ratio vs Alternative Allocation</h2>
+    <p class="section-lead">At a fixed equity level, how does Sharpe ratio change as the alternative weight increases (displacing bonds)? This directly answers: "what's the right alternative allocation size?"</p>
+
+    <div class="chart-grid">
+      <div class="chart-wrap">
+        <div class="chart-title">Infrastructure — Sharpe vs Alt Weight</div>
+        <div class="chart-caption">At 4 equity levels. Higher equity → more Sharpe benefit from infrastructure.</div>
+        <canvas id="sweep-infra"></canvas>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-title">Private Credit — Sharpe vs Alt Weight</div>
+        <div class="chart-caption">PC adds less Sharpe uplift and benefits plateau sooner due to low return.</div>
+        <canvas id="sweep-pc"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SECTION 5: INTERACTIVE CALCULATOR ── -->
+  <div class="section">
+    <p class="section-label">05 &nbsp;— &nbsp;Portfolio Calculator</p>
+    <h2 class="section-title">Interactive Allocation Explorer</h2>
+    <p class="section-lead">Adjust weights manually to see real-time portfolio statistics.</p>
+
+    <div class="tabs" id="calc-tabs">
+      <button class="tab-btn active" onclick="switchCalc('infra',this)">Infrastructure</button>
+      <button class="tab-btn" onclick="switchCalc('pc',this)">Private Credit</button>
+    </div>
+
+    <div style="max-width:600px;">
+      <div class="slider-row">
+        <span class="slider-label">Equity</span>
+        <input type="range" id="sl-eq" min="0" max="100" value="60" oninput="updateCalc()">
+        <span class="slider-val" id="sv-eq">60%</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Alternative</span>
+        <input type="range" id="sl-alt" min="0" max="60" value="10" oninput="updateCalc()">
+        <span class="slider-val" id="sv-alt">10%</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Bonds (residual)</span>
+        <input type="range" disabled id="sl-bd" min="0" max="100" value="30">
+        <span class="slider-val" id="sv-bd">30%</span>
+      </div>
+
+      <div class="weight-bar" id="calc-bar" style="margin-top:1rem;"></div>
+
+      <div class="live-result">
+        <div class="live-item"><div class="live-lbl">Expected Return</div><div class="live-val" id="live-ret">—</div></div>
+        <div class="live-item"><div class="live-lbl">Volatility</div><div class="live-val" id="live-vol">—</div></div>
+        <div class="live-item"><div class="live-lbl">Sharpe Ratio</div><div class="live-val" id="live-sh">—</div></div>
+        <div class="live-item"><div class="live-lbl">vs 60/40 Sharpe</div><div class="live-val" id="live-diff">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SECTION 6: CONCLUSIONS ── -->
+  <div class="section">
+    <p class="section-label">06 &nbsp;— &nbsp;Conclusions</p>
+    <h2 class="section-title">Key Findings for the Investment Committee</h2>
+
+    <div class="cards" style="grid-template-columns: repeat(2, 1fr); margin-bottom:1.5rem;">
+      <div class="card highlight">
+        <div class="card-label">Optimal Infra Portfolio</div>
+        <div class="card-value" style="font-size:1.1rem; margin-top:0.3rem;">50% Eq / 20% Bd / 30% Infra</div>
+        <div class="card-sub" style="margin-top:0.5rem;">Return 10.2% · Vol 10.4% · <strong style="color:var(--gold)">Sharpe 0.856</strong></div>
+        <div class="card-sub">Pension-practical, high equity retention, max Sharpe within 30% alt cap</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Optimal PC Portfolio</div>
+        <div class="card-value" style="font-size:1.1rem; margin-top:0.3rem; color:var(--accent2);">50% Eq / 30% Bd / 20% PC</div>
+        <div class="card-sub" style="margin-top:0.5rem;">Return 8.7% · Vol 9.2% · Sharpe 0.797</div>
+        <div class="card-sub">Lower vol, but Sharpe improvement over 60/40 is minimal (+0.005)</div>
+      </div>
+    </div>
+
+    <div class="insight">
+      <strong>Finding 1 — Infrastructure warrants a larger-than-10% allocation.</strong> Across all equity levels tested (40–60%), the Sharpe-optimal infrastructure weight is the maximum allowed (30% cap). Every additional 5% infrastructure replacing bonds improves Sharpe by approximately 6–8 bps. The prior fixed 10% allocation is clearly sub-optimal.
+    </div>
+    <div class="insight">
+      <strong>Finding 2 — Private Credit's Sharpe gains are modest and equity-level-dependent.</strong> With equity fixed at 60%, adding Private Credit actually <em>reduces</em> Sharpe (bonds at 40% already dominate the low-vol role). PC only improves Sharpe when equity is reduced to 45–50%, because it then substitutes for both bonds and some equity risk. It is a bond replacement, not an equity diversifier.
+    </div>
+    <div class="insight caution">
+      <strong>Finding 3 — MVO pushes toward dramatic equity reduction that pension funds won't accept.</strong> The unconstrained optimizer recommends 7% equity (Infrastructure) or 23% equity (Private Credit) — far outside pension fund norms. The pension-constrained solution (30% equity floor) is the operative result, but even this requires board approval for a significant equity underweight relative to typical 55–65% strategic ranges. Practical recommendation: use a 50% equity anchor with 20–30% infrastructure.
+    </div>
+    <div class="insight">
+      <strong>Finding 4 — The optimal portfolio depends on the objective.</strong> If maximising Sharpe: 30/40/30 (Infra) is optimal. If maintaining returns near 10%: 50/20/30 (Infra). If minimising drawdown risk: 55/30/15 (Infra) is a reasonable compromise. There is no single "optimal" — the committee must specify whether Sharpe, return, or drawdown is the primary objective.
+    </div>
+
+    <div class="data-table-wrap" style="margin-top:2rem;">
+      <table class="data-table">
+        <thead><tr>
+          <th>Objective</th><th>Recommended Portfolio (Infra)</th><th>Return</th><th>Sharpe</th><th>Vol</th><th>vs Baseline Sharpe</th>
+        </tr></thead>
+        <tbody>
+          <tr class="highlight-row"><td>Max Sharpe (pension-constrained)</td><td>30% / 40% / 30%</td><td>7.88%</td><td>0.894</td><td>7.3%</td><td style="color:var(--green)">+0.102</td></tr>
+          <tr><td>Max Sharpe (high equity retained)</td><td>50% / 20% / 30%</td><td>10.24%</td><td>0.856</td><td>10.4%</td><td style="color:var(--green)">+0.064</td></tr>
+          <tr><td>Balance return + Sharpe</td><td>55% / 25% / 20%</td><td>10.22%</td><td>0.833</td><td>10.6%</td><td style="color:var(--green)">+0.041</td></tr>
+          <tr><td>Minimal change from 60/40</td><td>60% / 25% / 15%</td><td>10.51%</td><td>0.818</td><td>11.2%</td><td style="color:var(--green)">+0.026</td></tr>
+          <tr class="baseline-row"><td>Prior fixed allocation (reference)</td><td>60% / 30% / 10%</td><td>10.20%</td><td>0.810</td><td>10.9%</td><td>+0.018</td></tr>
+          <tr class="baseline-row"><td>Baseline 60/40 (no alt)</td><td>60% / 40% / 0%</td><td>9.60%</td><td>0.792</td><td>10.4%</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="padding: 2rem 0; border-top: 1px solid var(--rule); font-size: 0.72rem; color: var(--muted); line-height: 1.8;">
+    <em>Data: Public ETF proxies (SPY, AGG, IGF, BKLN). Smoothed volatilities per Geltner (1991, 1993). Correlations estimated from portfolio-level outputs. MVO via SLSQP (scipy.optimize). Pension constraints: Equity 30–75%, Bonds 15–60%, Infrastructure 5–30%, Private Credit 5–25%. This analysis uses public market proxies and should be validated against private market benchmarks before final allocation decisions.</em>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+const RF = 0.0136;
+
+// ──────────────────────────────────────────
+// DATA
+// ──────────────────────────────────────────
+const DATA = {
+  infra: {
+    mu: [0.1431, 0.0253, 0.0858],
+    vols: [0.1720, 0.0480, 0.0750],
+    corr: [[1,-0.05,0.70],[-0.05,1,0.30],[0.70,0.30,1]],
+    label: 'Infrastructure',
+    color: '#c84b2f',
+  },
+  pc: {
+    mu: [0.1431, 0.0253, 0.0383],
+    vols: [0.1720, 0.0480, 0.0360],
+    corr: [[1,-0.05,0.72],[-0.05,1,0.10],[0.72,0.10,1]],
+    label: 'Private Credit',
+    color: '#2d5fa6',
+  }
+};
+
+function buildCov(vols, corr) {
+  const n = vols.length;
+  const cov = Array.from({length:n}, () => Array(n).fill(0));
+  for (let i=0; i<n; i++)
+    for (let j=0; j<n; j++)
+      cov[i][j] = vols[i]*vols[j]*corr[i][j];
+  return cov;
+}
+
+function portfolioStats(w, mu, cov) {
+  const n = mu.length;
+  let ret = 0;
+  for (let i=0; i<n; i++) ret += w[i]*mu[i];
+  let variance = 0;
+  for (let i=0; i<n; i++)
+    for (let j=0; j<n; j++)
+      variance += w[i]*w[j]*cov[i][j];
+  const vol = Math.sqrt(variance);
+  const sh = (ret - RF) / vol;
+  return {ret, vol, sh};
+}
+
+// Compute efficient frontier via parametric sweep
+function computeFrontier(muArr, vols, corrArr, bounds, nPts=120) {
+  const cov = buildCov(vols, corrArr);
+  const pts = [];
+  // Sweep equity from bounds[0][0] to bounds[0][1], alt from bounds[2][0] to bounds[2][1]
+  const eqMin=bounds[0][0], eqMax=bounds[0][1];
+  const altMin=bounds[2][0], altMax=bounds[2][1];
+  const bdMin=bounds[1][0], bdMax=bounds[1][1];
+
+  const n = 60;
+  for (let i=0; i<=n; i++) {
+    for (let j=0; j<=n; j++) {
+      const eq = eqMin + i/n*(eqMax-eqMin);
+      const alt = altMin + j/n*(altMax-altMin);
+      const bd = 1 - eq - alt;
+      if (bd < bdMin - 0.001 || bd > bdMax + 0.001) continue;
+      if (eq < -0.001 || alt < -0.001) continue;
+      const w = [eq, Math.max(0,bd), alt];
+      if (Math.abs(w[0]+w[1]+w[2]-1) > 0.01) continue;
+      const s = portfolioStats(w, muArr, cov);
+      pts.push({...s, eq, bd:w[1], alt});
+    }
+  }
+  // Build efficient frontier: for each vol level, keep max return
+  pts.sort((a,b)=>a.vol-b.vol);
+  const frontier = [];
+  let maxRet = -Infinity;
+  for (const p of pts) {
+    if (p.ret > maxRet) { maxRet = p.ret; frontier.push(p); }
+  }
+  return frontier.sort((a,b)=>a.vol-b.vol);
+}
+
+// Unconstrained frontier (long-only)
+function computeFrontierUnconstrained(muArr, vols, corrArr) {
+  return computeFrontier(muArr, vols, corrArr, [[0,1],[0,1],[0,1]]);
+}
+
+// ──────────────────────────────────────────
+// EFFICIENT FRONTIER CHARTS
+// ──────────────────────────────────────────
+let efCharts = {};
+
+function makeEFChart(canvasId, uKey) {
+  const u = DATA[uKey];
+  const cov = buildCov(u.vols, u.corr);
+
+  const boundsP = uKey==='infra'
+    ? [[0.30,0.75],[0.15,0.60],[0.05,0.30]]
+    : [[0.30,0.75],[0.15,0.60],[0.05,0.25]];
+  const boundsU = [[0,1],[0,1],[0,1]];
+
+  const efP = computeFrontier(u.mu, u.vols, u.corr, boundsP);
+  const efU = computeFrontierUnconstrained(u.mu, u.vols, u.corr);
+
+  // Key portfolios
+  const kps = [
+    {label:'60/40 Baseline', w:[0.60,0.40,0.00], marker:'⬤'},
+    {label:'60/30/10 (prior)', w:[0.60,0.30,0.10], marker:'⬤'},
+  ];
+  const kpData = kps.map(kp => {
+    const s = portfolioStats(kp.w, u.mu, cov);
+    return {x: s.vol*100, y: s.ret*100, label: kp.label};
+  });
+
+  // Max Sharpe on pension frontier
+  let maxSh = -Infinity, msP = null;
+  for (const p of efP) { if (p.sh > maxSh) { maxSh=p.sh; msP=p; } }
+
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  if (efCharts[canvasId]) efCharts[canvasId].destroy();
+
+  efCharts[canvasId] = new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [
+        {
+          label: 'Pension-constrained frontier',
+          data: efP.map(p=>({x:p.vol*100, y:p.ret*100, eq:p.eq, bd:p.bd, alt:p.alt, sh:p.sh})),
+          borderColor: u.color, borderWidth: 2.5, fill: false,
+          showLine: true, pointRadius: 0, pointHoverRadius: 0, tension: 0.3,
+        },
+        {
+          label: 'Unconstrained frontier',
+          data: efU.map(p=>({x:p.vol*100, y:p.ret*100, eq:p.eq, bd:p.bd, alt:p.alt, sh:p.sh})),
+          borderColor: u.color, borderWidth: 1.5, borderDash: [5,4], fill: false,
+          showLine: true, pointRadius: 0, pointHoverRadius: 0, tension: 0.3,
+          borderDashOffset: 0,
+        },
+        {
+          label: 'Max Sharpe (pension)',
+          data: msP ? [{x:msP.vol*100, y:msP.ret*100}] : [],
+          backgroundColor: u.color, borderColor: '#fff', borderWidth: 2,
+          pointRadius: 10, pointStyle: 'star', showLine: false,
+        },
+        {
+          label: 'Reference portfolios',
+          data: kpData,
+          backgroundColor: ['#7a7167','#b8962e'],
+          borderColor: '#fff', borderWidth: 2,
+          pointRadius: 8, showLine: false,
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top', labels: { font: { family:'DM Mono', size:11 }, boxWidth:14 } },
+        tooltip: {
+          callbacks: {
+            label(ctx) {
+              const d = ctx.raw;
+              if (d.eq != null) {
+                return [
+                  `Return: ${(d.y).toFixed(2)}%`,
+                  `Volatility: ${(d.x).toFixed(2)}%`,
+                  `Sharpe: ${d.sh.toFixed(3)}`,
+                  `Equity: ${(d.eq*100).toFixed(0)}% | Bonds: ${(d.bd*100).toFixed(0)}% | Alt: ${(d.alt*100).toFixed(0)}%`,
+                ];
+              }
+              return [`${ctx.dataset.label}: ${d.y?.toFixed(2)}% ret, ${d.x?.toFixed(2)}% vol`];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display:true, text:'Annual Volatility (%)', font:{family:'DM Mono',size:11} },
+          ticks: { font:{family:'DM Mono',size:10} },
+          grid: { color: 'rgba(0,0,0,0.05)' }
+        },
+        y: {
+          title: { display:true, text:'Annual Return (%)', font:{family:'DM Mono',size:11} },
+          ticks: { font:{family:'DM Mono',size:10} },
+          grid: { color: 'rgba(0,0,0,0.05)' }
+        }
+      }
+    }
+  });
+}
+
+// ──────────────────────────────────────────
+// REFERENCE TABLES
+// ──────────────────────────────────────────
+const GRID_DATA = {
+  infra: [
+    ['60/40 baseline',      [0.60,0.40,0.00], false, 'baseline'],
+    ['60/30/10 (prior)',    [0.60,0.30,0.10], false, 'baseline'],
+    ['60/25/15',            [0.60,0.25,0.15], false, ''],
+    ['60/20/20',            [0.60,0.20,0.20], false, ''],
+    ['55/30/15',            [0.55,0.30,0.15], false, ''],
+    ['55/25/20',            [0.55,0.25,0.20], false, ''],
+    ['50/30/20',            [0.50,0.30,0.20], false, ''],
+    ['50/25/25',            [0.50,0.25,0.25], false, ''],
+    ['50/20/30 ★',          [0.50,0.20,0.30], false, 'highlight'],
+    ['45/25/30',            [0.45,0.25,0.30], false, ''],
+    ['MVO unconstrained',   [0.073,0.00,0.927], false, ''],
+    ['MVO pension-constrained', [0.30,0.40,0.30], true, 'highlight'],
+  ],
+  pc: [
+    ['60/40 baseline',      [0.60,0.40,0.00], false, 'baseline'],
+    ['60/30/10 (prior)',    [0.60,0.30,0.10], false, 'baseline'],
+    ['60/25/15',            [0.60,0.25,0.15], false, ''],
+    ['60/20/20',            [0.60,0.20,0.20], false, ''],
+    ['55/30/15',            [0.55,0.30,0.15], false, ''],
+    ['55/25/20',            [0.55,0.25,0.20], false, ''],
+    ['50/30/20',            [0.50,0.30,0.20], false, ''],
+    ['50/25/25',            [0.50,0.25,0.25], false, 'highlight'],
+    ['45/25/30',            [0.45,0.25,0.30], false, ''],
+    ['MVO unconstrained',   [0.232,0.347,0.421], false, ''],
+    ['MVO pension-constrained', [0.306,0.444,0.25], true, ''],
+  ]
+};
+
+function buildTable(tableId, uKey) {
+  const u = DATA[uKey];
+  const cov = buildCov(u.vols, u.corr);
+  const baseStats = portfolioStats([0.60,0.40,0.00], u.mu, cov);
+  const rows = GRID_DATA[uKey];
+  const altLabel = u.label;
+  const color = u.color;
+
+  const tbl = document.getElementById(tableId);
+  tbl.innerHTML = `
+    <thead><tr>
+      <th>Portfolio</th>
+      <th>Equity</th><th>Bonds</th><th>${altLabel}</th>
+      <th>Return</th><th>Volatility</th><th>Sharpe</th><th>vs 60/40</th>
+      <th>Weights</th>
+    </tr></thead>
+    <tbody>${rows.map(([name, w, isOptimal, cls]) => {
+      const s = portfolioStats(w, u.mu, cov);
+      const diff = s.sh - baseStats.sh;
+      const diffStr = diff >= 0
+        ? `<span style="color:var(--green)">+${diff.toFixed(3)}</span>`
+        : `<span style="color:var(--accent)">${diff.toFixed(3)}</span>`;
+      const rowCls = cls === 'highlight' ? 'highlight-row' : cls === 'baseline' ? 'baseline-row' : '';
+      const bar = `<div class="weight-bar" style="height:16px; min-width:100px;">
+        <div class="weight-seg seg-eq" style="width:${w[0]*100}%">${w[0]>0.15?Math.round(w[0]*100)+'%':''}</div>
+        <div class="weight-seg seg-bd" style="width:${w[1]*100}%">${w[1]>0.15?Math.round(w[1]*100)+'%':''}</div>
+        <div class="weight-seg seg-alt" style="width:${w[2]*100}%; background:${color}">${w[2]>0.08?Math.round(w[2]*100)+'%':''}</div>
+      </div>`;
+      return `<tr class="${rowCls}">
+        <td>${name}${isOptimal?' <span style="color:var(--gold);font-size:0.7rem">★ MVO</span>':''}</td>
+        <td>${(w[0]*100).toFixed(1)}%</td>
+        <td>${(w[1]*100).toFixed(1)}%</td>
+        <td>${(w[2]*100).toFixed(1)}%</td>
+        <td>${(s.ret*100).toFixed(2)}%</td>
+        <td>${(s.vol*100).toFixed(2)}%</td>
+        <td>${s.sh.toFixed(3)}</td>
+        <td>${diffStr}</td>
+        <td>${bar}</td>
+      </tr>`;
+    }).join('')}</tbody>`;
+}
+
+// ──────────────────────────────────────────
+// ALT WEIGHT SWEEP CHARTS
+// ──────────────────────────────────────────
+let sweepCharts = {};
+
+function makeSweepChart(canvasId, uKey) {
+  const u = DATA[uKey];
+  const cov = buildCov(u.vols, u.corr);
+  const eqLevels = [0.40, 0.50, 0.55, 0.60];
+  const colors = ['#c84b2f','#2d5fa6','#2a7a4b','#b8962e'];
+
+  const datasets = eqLevels.map((eq, i) => {
+    const compl = 1-eq;
+    const pts = [];
+    for (let a=0; a<=compl+0.001; a+=0.01) {
+      const b = compl-a;
+      if (b < 0) break;
+      const w = [eq, b, a];
+      const s = portfolioStats(w, u.mu, cov);
+      pts.push({x: a*100, y: s.sh});
+    }
+    return {
+      label: `${Math.round(eq*100)}% Equity`,
+      data: pts, borderColor: colors[i], backgroundColor: colors[i]+'22',
+      borderWidth: 2, pointRadius: 0, fill: false, tension: 0.3, showLine: true,
+    };
+  });
+
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  if (sweepCharts[canvasId]) sweepCharts[canvasId].destroy();
+  sweepCharts[canvasId] = new Chart(ctx, {
+    type: 'scatter',
+    data: { datasets },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position:'top', labels:{font:{family:'DM Mono',size:10}, boxWidth:12} },
+        tooltip: {
+          callbacks: {
+            label(ctx) {
+              return `${ctx.dataset.label}: Alt=${ctx.raw.x.toFixed(0)}%, Sharpe=${ctx.raw.y.toFixed(3)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { title:{display:true, text:`${u.label} Allocation (%)`, font:{family:'DM Mono',size:10}},
+             ticks:{font:{family:'DM Mono',size:10}}, grid:{color:'rgba(0,0,0,0.05)'} },
+        y: { title:{display:true, text:'Sharpe Ratio', font:{family:'DM Mono',size:10}},
+             ticks:{font:{family:'DM Mono',size:10}}, grid:{color:'rgba(0,0,0,0.05)'} },
+      }
+    }
+  });
+}
+
+// ──────────────────────────────────────────
+// INTERACTIVE CALCULATOR
+// ──────────────────────────────────────────
+let calcUniverse = 'infra';
+
+function switchCalc(uKey, btn) {
+  calcUniverse = uKey;
+  document.querySelectorAll('#calc-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateCalc();
+}
+
+function updateCalc() {
+  const eqSlider = document.getElementById('sl-eq');
+  const altSlider = document.getElementById('sl-alt');
+  const eq = parseInt(eqSlider.value) / 100;
+  const alt = parseInt(altSlider.value) / 100;
+  const bd = Math.max(0, 1 - eq - alt);
+
+  document.getElementById('sv-eq').textContent = Math.round(eq*100)+'%';
+  document.getElementById('sv-alt').textContent = Math.round(alt*100)+'%';
+  document.getElementById('sv-bd').textContent = Math.round(bd*100)+'%';
+
+  const u = DATA[calcUniverse];
+  const cov = buildCov(u.vols, u.corr);
+  const s = portfolioStats([eq, bd, alt], u.mu, cov);
+  const base = portfolioStats([0.60, 0.40, 0.00], u.mu, cov);
+  const diff = s.sh - base.sh;
+
+  document.getElementById('live-ret').textContent = (s.ret*100).toFixed(2)+'%';
+  document.getElementById('live-vol').textContent = (s.vol*100).toFixed(2)+'%';
+  document.getElementById('live-sh').textContent = s.sh.toFixed(3);
+  document.getElementById('live-diff').textContent = (diff>=0?'+':'')+diff.toFixed(3);
+  document.getElementById('live-diff').style.color = diff>=0 ? 'var(--green)' : 'var(--accent)';
+
+  // Update weight bar
+  const bar = document.getElementById('calc-bar');
+  const color = u.color;
+  bar.innerHTML = `
+    <div class="weight-seg seg-eq" style="width:${eq*100}%">${eq>0.15?Math.round(eq*100)+'%':''}</div>
+    <div class="weight-seg seg-bd" style="width:${bd*100}%">${bd>0.12?Math.round(bd*100)+'%':''}</div>
+    <div class="weight-seg seg-alt" style="width:${alt*100}%; background:${color}">${alt>0.05?Math.round(alt*100)+'%':''}</div>
+  `;
+}
+
+// ──────────────────────────────────────────
+// TAB SWITCHER
+// ──────────────────────────────────────────
+function switchTab(groupId, panelId, btn) {
+  const group = document.getElementById(groupId);
+  group.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // Find all sibling panels
+  const container = group.nextElementSibling;
+  // Walk siblings until next tabs or section
+  let el = group.nextElementSibling;
+  while (el && !el.classList.contains('tabs') && !el.classList.contains('section') && !el.classList.contains('insight') && !el.classList.contains('data-table-wrap') && !el.classList.contains('chart-grid')) {
+    if (el.classList.contains('tab-panel')) el.classList.remove('active');
+    el = el.nextElementSibling;
+  }
+  document.getElementById(panelId).classList.add('active');
+}
+
+// ──────────────────────────────────────────
+// INIT
+// ──────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  makeEFChart('ef-chart-infra', 'infra');
+  makeEFChart('ef-chart-pc', 'pc');
+  buildTable('table-infra', 'infra');
+  buildTable('table-pc', 'pc');
+  makeSweepChart('sweep-infra', 'infra');
+  makeSweepChart('sweep-pc', 'pc');
+  updateCalc();
+});
+</script>
+</body>
+</html>
